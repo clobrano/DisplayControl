@@ -1,0 +1,46 @@
+brightness:
+  _code: "0x10"
+  _description: "Brightness"
+  values:
+    "0": "0x00"
+    "25": "0x19"
+    "50": "0x32"
+    "75": "0x4b"
+    "100": "0x64"
+
+contrast:
+  _code: "0x12"
+  _description: "Contrast"
+  values:
+    "0": "0x00"
+    "25": "0x19"
+    "50": "0x32"
+    "75": "0x4b"
+    "100": "0x64"
+
+color_preset:
+  _code: "0x14"
+  _description: "Select color preset"
+  values:
+    sRGB: "0x01"
+    5000K: "0x04"
+    6500K: "0x05"
+    7500K: "0x06"
+    9300K: "0x08"
+    User 1: "0x0b"
+
+input_source:
+  _code: "0x60"
+  _description: "Input Source"
+  values:
+    DisplayPort-1: "0x0f"
+    DisplayPort-2: "0x10"
+    HDMI-1: "0x11"
+
+display_mode:
+  _code: "0xdc"
+  _description: "Display Mode"
+  values:
+    Standard/Default mode: "0x00"
+    Movie: "0x03"
+    User: "0x0c"
