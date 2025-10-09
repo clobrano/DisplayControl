@@ -145,7 +145,16 @@ func TestParseCapabilities_EdgeCases(t *testing.T) {
    Feature: E0 (Manufacturer Specific)
 `,
 			wantErr: false,
-			wantLen: 0, // Features without values are skipped
+			wantLen: 0, // Non-continuous features without values are skipped
+		},
+		{
+			name: "continuous feature without explicit values",
+			input: `VCP Features:
+   Feature: 10 (Brightness)
+   Feature: 12 (Contrast)
+`,
+			wantErr: false,
+			wantLen: 2, // Continuous features get default 0-100 range
 		},
 	}
 
@@ -157,9 +166,68 @@ func TestParseCapabilities_EdgeCases(t *testing.T) {
 				return
 			}
 			if !tt.wantErr && len(features) != tt.wantLen {
-				t.Errorf("Features length = %v, want %v", len(features), tt.wantLen)
+				t.Errorf("Features length = %v, want %v (features: %v)", len(features), tt.wantLen, features)
 			}
 		})
+	}
+}
+
+func TestParseCapabilities_ContinuousWithoutRange(t *testing.T) {
+	// Test case matching the real monitor output where brightness has no Values: line
+	input := `Model: 27E1N5300AE
+MCCS version: 2.2
+VCP Features:
+   Feature: 10 (Brightness)
+   Feature: 12 (Contrast)
+   Feature: 14 (Select color preset)
+      Values:
+         01: sRGB
+         04: 5000 K
+   Feature: 60 (Input Source)
+      Values:
+         11: HDMI-1
+         0f: DisplayPort-1
+`
+
+	features, err := ParseCapabilities(input)
+	if err != nil {
+		t.Fatalf("ParseCapabilities() error = %v", err)
+	}
+
+	// Check brightness feature exists with default range
+	brightness, ok := features["brightness"]
+	if !ok {
+		t.Fatalf("Brightness feature not found")
+	}
+
+	if brightness.Code != "0x10" {
+		t.Errorf("Brightness code = %v, want 0x10", brightness.Code)
+	}
+
+	if len(brightness.Values) != 5 {
+		t.Errorf("Brightness values length = %v, want 5", len(brightness.Values))
+	}
+
+	// Check that default range includes expected values
+	expectedValues := []string{"0", "25", "50", "75", "100"}
+	for _, val := range expectedValues {
+		if _, ok := brightness.Values[val]; !ok {
+			t.Errorf("Brightness missing value %s", val)
+		}
+	}
+
+	// Check contrast feature also works
+	contrast, ok := features["contrast"]
+	if !ok {
+		t.Fatalf("Contrast feature not found")
+	}
+
+	if contrast.Code != "0x12" {
+		t.Errorf("Contrast code = %v, want 0x12", contrast.Code)
+	}
+
+	if len(contrast.Values) != 5 {
+		t.Errorf("Contrast values length = %v, want 5", len(contrast.Values))
 	}
 }
 

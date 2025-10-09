@@ -9,6 +9,20 @@ import (
 	"github.com/clobrano/DisplayControl/internal/config"
 )
 
+// List of continuous VCP features that should default to 0-100 range if no values specified
+var continuousFeatures = map[string]bool{
+	"brightness":              true,
+	"contrast":                true,
+	"video_gain_red":          true,
+	"video_gain_green":        true,
+	"video_gain_blue":         true,
+	"video_black_level_red":   true,
+	"video_black_level_green": true,
+	"video_black_level_blue":  true,
+	"sharpness":               true,
+	"audio_speaker_volume":    true,
+}
+
 // ParseCapabilities parses ddcutil capabilities output and returns VCP features
 func ParseCapabilities(output string) (map[string]config.VCPFeature, error) {
 	features := make(map[string]config.VCPFeature)
@@ -30,8 +44,15 @@ func ParseCapabilities(output string) (map[string]config.VCPFeature, error) {
 		// Check for feature definition
 		if matches := featureRegex.FindStringSubmatch(line); matches != nil {
 			// Save previous feature if it exists and has values
-			if currentFeature != nil && len(currentFeature.Values) > 0 {
-				features[currentFeatureName] = *currentFeature
+			if currentFeature != nil {
+				// Add default range for continuous features without explicit values
+				if len(currentFeature.Values) == 0 && isContinuousFeature(currentFeatureName) {
+					currentFeature.Values = generateRangeValues(0, 100)
+				}
+				// Only save if feature has values
+				if len(currentFeature.Values) > 0 {
+					features[currentFeatureName] = *currentFeature
+				}
 			}
 
 			code := matches[1]
@@ -84,11 +105,23 @@ func ParseCapabilities(output string) (map[string]config.VCPFeature, error) {
 	}
 
 	// Don't forget the last feature
-	if currentFeature != nil && len(currentFeature.Values) > 0 {
-		features[currentFeatureName] = *currentFeature
+	if currentFeature != nil {
+		// Add default range for continuous features without explicit values
+		if len(currentFeature.Values) == 0 && isContinuousFeature(currentFeatureName) {
+			currentFeature.Values = generateRangeValues(0, 100)
+		}
+		// Only save if feature has values
+		if len(currentFeature.Values) > 0 {
+			features[currentFeatureName] = *currentFeature
+		}
 	}
 
 	return features, nil
+}
+
+// isContinuousFeature checks if a feature should be treated as continuous (0-100 range)
+func isContinuousFeature(featureName string) bool {
+	return continuousFeatures[featureName]
 }
 
 // decimalToHex converts a hex or decimal string to lowercase hex with 0x prefix
@@ -128,7 +161,7 @@ func generateRangeValues(start, end int) map[string]string {
 
 	// For typical ranges like 0-100, generate at 0, 25, 50, 75, 100
 	if end == 100 {
-		percentages := []int{0, 25, 50, 75, 100}
+		percentages := []int{0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100}
 		for _, pct := range percentages {
 			values[fmt.Sprintf("%d", pct)] = fmt.Sprintf("0x%02x", pct)
 		}
@@ -137,7 +170,7 @@ func generateRangeValues(start, end int) map[string]string {
 
 	// For other ranges, generate at start, 25%, 50%, 75%, end
 	range_ := end - start
-	steps := []float64{0, 0.25, 0.50, 0.75, 1.0}
+	steps := []float64{0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}
 	for _, step := range steps {
 		val := start + int(float64(range_)*step)
 		values[fmt.Sprintf("%d", val)] = fmt.Sprintf("0x%02x", val)
