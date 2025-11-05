@@ -3,12 +3,41 @@ package ui
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/clobrano/DisplayControl/internal/config"
 	"github.com/clobrano/DisplayControl/internal/ddcutil"
 )
+
+// smartSort sorts items intelligently: numerically if all items are numbers, alphabetically otherwise
+func smartSort(items []string) {
+	// Check if all items can be parsed as numbers
+	allNumbers := true
+	numbers := make([]float64, len(items))
+
+	for i, item := range items {
+		num, err := strconv.ParseFloat(item, 64)
+		if err != nil {
+			allNumbers = false
+			break
+		}
+		numbers[i] = num
+	}
+
+	if allNumbers {
+		// Sort numerically
+		sort.Slice(items, func(i, j int) bool {
+			numI, _ := strconv.ParseFloat(items[i], 64)
+			numJ, _ := strconv.ParseFloat(items[j], 64)
+			return numI < numJ
+		})
+	} else {
+		// Sort alphabetically
+		sort.Strings(items)
+	}
+}
 
 // Model represents the application state for the TUI
 type Model struct {
@@ -30,7 +59,7 @@ func NewModel(cfg *config.Config, executor *ddcutil.Executor, dryRun bool) Model
 	for name := range cfg.Features {
 		items = append(items, name)
 	}
-	sort.Strings(items)
+	smartSort(items)
 
 	return Model{
 		config:      cfg,
@@ -158,7 +187,7 @@ func (m Model) handleSelection() (Model, tea.Cmd) {
 		for name := range feature.Values {
 			values = append(values, name)
 		}
-		sort.Strings(values)
+		smartSort(values)
 
 		m.currentPath = append(m.currentPath, selected)
 		m.breadcrumbs = append(m.breadcrumbs, feature.Description)
@@ -199,7 +228,7 @@ func (m Model) goBack() (Model, tea.Cmd) {
 		for name := range m.config.Features {
 			items = append(items, name)
 		}
-		sort.Strings(items)
+		smartSort(items)
 		m.items = items
 	}
 
@@ -220,7 +249,7 @@ func (m Model) goToRoot() (Model, tea.Cmd) {
 	for name := range m.config.Features {
 		items = append(items, name)
 	}
-	sort.Strings(items)
+	smartSort(items)
 	m.items = items
 	m.cursor = 0
 	m.result = nil
