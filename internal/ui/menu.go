@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -29,6 +30,7 @@ func NewModel(cfg *config.Config, executor *ddcutil.Executor, dryRun bool) Model
 	for name := range cfg.Features {
 		items = append(items, name)
 	}
+	sort.Strings(items)
 
 	return Model{
 		config:      cfg,
@@ -156,6 +158,7 @@ func (m Model) handleSelection() (Model, tea.Cmd) {
 		for name := range feature.Values {
 			values = append(values, name)
 		}
+		sort.Strings(values)
 
 		m.currentPath = append(m.currentPath, selected)
 		m.breadcrumbs = append(m.breadcrumbs, feature.Description)
@@ -196,6 +199,7 @@ func (m Model) goBack() (Model, tea.Cmd) {
 		for name := range m.config.Features {
 			items = append(items, name)
 		}
+		sort.Strings(items)
 		m.items = items
 	}
 
@@ -216,6 +220,7 @@ func (m Model) goToRoot() (Model, tea.Cmd) {
 	for name := range m.config.Features {
 		items = append(items, name)
 	}
+	sort.Strings(items)
 	m.items = items
 	m.cursor = 0
 	m.result = nil
